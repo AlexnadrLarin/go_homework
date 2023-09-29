@@ -2,25 +2,25 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
-	"errors"
 )
 
 type Options struct {
-	C bool
-	D bool
-	U bool
-	F int
-	S int
-	I bool
-	inputFileName string
+	C              bool
+	D              bool
+	U              bool
+	F              int
+	S              int
+	I              bool
+	inputFileName  string
 	outputFileName string
 }
 
 func scanner(input *os.File) []string {
-	var buf []string;
+	var buf []string
 
 	inputScanner := bufio.NewScanner(input)
 
@@ -33,7 +33,7 @@ func scanner(input *os.File) []string {
 	}
 
 	return buf
-} 
+}
 
 func argsParser(args []string, options Options) (Options, error) {
 	for idx, argValue := range args {
@@ -46,26 +46,35 @@ func argsParser(args []string, options Options) (Options, error) {
 		} else if argValue == "-i" {
 			options.I = true
 		} else if argValue == "-f" {
-			i, err := strconv.Atoi(args[idx + 1])
+			i, err := strconv.Atoi(args[idx+1])
 			if err != nil {
 				return options, err
 			}
+
+			if i < 0 {
+				return options, errors.New("Введёное число должно быть больше 0.")
+			}
+
 			options.F = i
 		} else if argValue == "-s" {
-			i, err := strconv.Atoi(args[idx + 1])
+			i, err := strconv.Atoi(args[idx+1])
 			if err != nil {
 				return options, err
 			}
+
+			if i < 0 {
+				return options, errors.New("Введёное число должно быть больше 0.")
+			}
+
 			options.S = i
-		} else if _, err := strconv.Atoi(argValue); err == nil && (args[idx -1] == "-f" || args[idx -1] == "-s") {
+		} else if _, err := strconv.Atoi(argValue); err == nil && (args[idx-1] == "-f" || args[idx-1] == "-s") {
 			if err != nil {
 				return options, err
 			}
 		} else if string(argValue[0]) == "-" {
-			return options, errors.New("Invalid number of fields to skip")
+			return options, errors.New("Такого параметра не существует.\n")
 		} else {
 			file, err := os.Open(argValue)
-
 			if err == nil {
 				if options.inputFileName == "" {
 					options.inputFileName = argValue
@@ -85,15 +94,16 @@ func argsParser(args []string, options Options) (Options, error) {
 
 func main() {
 	var options Options = Options{
-		C: false,
-		D: false, 
-		U: false, 
-		F: -1,
-		S: -1,
-		I: false,
-		inputFileName: "",
+		C:              false,
+		D:              false,
+		U:              false,
+		F:              -1,
+		S:              -1,
+		I:              false,
+		inputFileName:  "",
 		outputFileName: "",
 	}
+
 	new_options, err := argsParser(os.Args[1:], options)
 	if err == nil {
 		fmt.Println(new_options)
