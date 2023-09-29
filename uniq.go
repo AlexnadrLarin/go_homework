@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strconv"
@@ -17,6 +18,22 @@ type Options struct {
 	inputFileName string
 	outputFileName string
 }
+
+func scanner(input *os.File) []string {
+	var buf []string;
+
+	inputScanner := bufio.NewScanner(input)
+
+	if inputScanner.Err() != nil {
+		return nil
+	}
+
+	for inputScanner.Scan() {
+		buf = append(buf, inputScanner.Text())
+	}
+
+	return buf
+} 
 
 func argsParser(args []string, options Options) (Options, error) {
 	for idx, argValue := range args {
