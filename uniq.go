@@ -52,7 +52,7 @@ func argsParser(args []string, options Options) (Options, error) {
 			}
 
 			if i < 0 {
-				return options, errors.New("Введёное число должно быть больше 0.")
+				return options, errors.New("Введёное число не может быть отрицательным.\n")
 			}
 
 			options.F = i
@@ -63,7 +63,7 @@ func argsParser(args []string, options Options) (Options, error) {
 			}
 
 			if i < 0 {
-				return options, errors.New("Введёное число должно быть больше 0.")
+				return options, errors.New("Введёное число не может быть отрицательным.\n")
 			}
 
 			options.S = i
@@ -92,8 +92,24 @@ func argsParser(args []string, options Options) (Options, error) {
 	return options, nil
 }
 
+func inputManager(options Options) []string {
+	if options.inputFileName != "" {
+		inputFile, err := os.Open(options.inputFileName)
+		defer inputFile.Close()
+
+		if err == nil {
+			return scanner(inputFile)
+		}
+
+	} else {
+		return scanner(os.Stdin)
+	}
+
+	return nil
+}
+
 func main() {
-	var options Options = Options{
+	var optionsInitial Options = Options{
 		C:              false,
 		D:              false,
 		U:              false,
@@ -104,9 +120,9 @@ func main() {
 		outputFileName: "",
 	}
 
-	new_options, err := argsParser(os.Args[1:], options)
+	options, err := argsParser(os.Args[1:], optionsInitial)
 	if err == nil {
-		fmt.Println(new_options)
+		fmt.Println(inputManager(options))
 	} else {
 		fmt.Println(err)
 	}
