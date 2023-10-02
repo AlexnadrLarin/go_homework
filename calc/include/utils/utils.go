@@ -6,14 +6,54 @@ import (
 	"strings"
 )
 
-// Основная функция для анализа выражение
+func expressionParse(expression string) []string {
+	elements := []string{}
+	currentElement := ""
+   
+	for _, value := range expression {
+	 	if isOperator(value) || value == '(' || value == ')' {
+	  		if currentElement != "" {
+	   			elements = append(elements, currentElement)
+	  		}
+
+			currentElement = ""
+			elements = append(elements, string(value))
+	 	} else {
+			_, err := strconv.ParseFloat(string(value), 64)
+			if err != nil {
+				return nil
+			}
+	  		currentElement += string(value)
+		}
+	}
+   
+	if currentElement != "" {
+		elements = append(elements, currentElement)
+	}
+   
+	return elements
+}
+   
+func isOperator(value rune) bool {
+	if value == '+' || value == '-' || value == '*' || value == '/' {
+		return true
+	} else {
+		return false
+	}
+}
+
+// Основная функция для анализа выражения
 func EvaluateExpression(expression string) (float64, error) {
  	expression = strings.ReplaceAll(expression, " ", "") 
 
 	var operandsStack []float64
 	var operatorsStack []string
 
- 	elements := strings.Split(expression, "")
+ 	elements := expressionParse(expression)
+
+	if elements == nil {
+		return 0, fmt.Errorf("Неправильный формат ввода!")
+	}
 
  	for _, element := range elements {
   		switch element {
@@ -60,7 +100,7 @@ func EvaluateExpression(expression string) (float64, error) {
 	return 0, fmt.Errorf("Ввыражение не может быть вычислено")
 }
 
-// Функция для корректной передачи операторов в функцию подсчёта
+// Функция для корректной передачи операторов и операндов из стека в функцию подсчёта
 func calculateExpression(operands *[]float64, operators *[]string) error {
 	if len(*operands) < 2 || len(*operators) == 0 {
 	 	return fmt.Errorf("Некорректное выражение")
