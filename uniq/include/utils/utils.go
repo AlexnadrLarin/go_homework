@@ -265,39 +265,44 @@ func Uniq() {
 	var edittedBuf []string
 
 	options, err := argsParser(os.Args[1:], optionsInitial)
-	if err == nil {
-		buf = inputManager(options)
-		if buf != nil {
-			edittedBuf = append(edittedBuf, buf...)
-			uniqManager(options, edittedBuf)
-			resultBuf := uniqStringsChecker(options, buf, edittedBuf)
-
-			if resultBuf != nil {
-				if options.outputFileName != "" {
-					// Вывод результата в файл
-					outputFile, err := os.OpenFile(options.outputFileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-					defer outputFile.Close()
-
-					if err == nil {
-						writer(outputFile, resultBuf)
-					} else {
-						fmt.Println("Ошибка:\n", err)
-					}
-				} else {
-					// Вывод результата в StdOut
-					for _, value := range resultBuf {
-						fmt.Println(value)
-					}
-				}
-			} else {
-				fmt.Println("Неправильный формат ввода!\n", 
-							"Параметры c, d, u взаимозаменяемы, поэтому их использование вместе не имеет никакого смысла.\n", 
-							"Использование утилиты uniq:\nuniq [-c | -d | -u] [-i] [-f num] [-s chars] [input_file [output_file]]")
-			}
-		} else {
-			fmt.Println("Вы ввели пустые данные!")
-		}
-	} else {
+	if err != nil {
 		fmt.Println("Ошибка:\n", err)
+		return
 	}
+
+	buf = inputManager(options)
+	if buf == nil {
+		fmt.Println("Вы ввели пустые данные!")
+		return
+	}
+
+	edittedBuf = append(edittedBuf, buf...)
+	uniqManager(options, edittedBuf)
+	resultBuf := uniqStringsChecker(options, buf, edittedBuf)
+
+	if resultBuf == nil {
+		fmt.Println("Неправильный формат ввода!\n", 
+					"Параметры c, d, u взаимозаменяемы, поэтому их использование вместе не имеет никакого смысла.\n", 
+					"Использование утилиты uniq:\nuniq [-c | -d | -u] [-i] [-f num] [-s chars] [input_file [output_file]]")
+		return
+	}
+
+	if options.outputFileName != "" {
+		// Вывод результата в файл
+		outputFile, err := os.OpenFile(options.outputFileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+		defer outputFile.Close()
+
+		if err != nil {
+			fmt.Println("Ошибка:\n", err)
+			return
+		} 
+		
+		writer(outputFile, resultBuf)
+	} else {
+		// Вывод результата в StdOut
+		for _, value := range resultBuf {
+			fmt.Println(value)
+		}
+	}
+
 }
