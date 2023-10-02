@@ -3,7 +3,26 @@ package calc_utils
 import (
 	"testing"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestExpressionParse(t *testing.T) {
+	var tests = []struct {
+		expression string
+		exp []string
+	}{
+		{"1+3", []string{"1", "+", "3"}},
+		{"11+3", []string{"11", "+", "3"}},
+		{"aaa", nil},
+		{"312414214/5", []string{"312414214", "/", "5"}},
+		{"(312414214/5)-1", []string{"(", "312414214", "/", "5", ")", "-", "1"}},
+	}
+
+	for _, e := range tests {
+		res := expressionParse(e.expression)
+		assert.Equal(t, res, e.exp, "TestExpressionParse")
+	}
+}
 
 func TestHasHigherPrecedence(t *testing.T) {
 	var tests = []struct {
@@ -92,7 +111,7 @@ func TestEvaluateExpression(t *testing.T) {
 		{"(1 + 2)", 3, nil}, 
 		{"1 + 2 * (3 - 1)", 5, nil}, 
 		{"1 / 0", 0, fmt.Errorf("Деление на ноль")}, 
-		{"asdasdsa", 0, fmt.Errorf(`strconv.ParseFloat: parsing "a": invalid syntax`)}, 
+		{"asdasdsa", 0, fmt.Errorf("Неправильный формат ввода!")}, 
 	}
 
 	for _, e := range tests {
