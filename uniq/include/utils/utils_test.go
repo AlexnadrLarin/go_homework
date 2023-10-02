@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestArgsParser(t *testing.T) {
+func TestParseArgs(t *testing.T) {
 	var OptionsOriginalState = Options{
 		C:              false,
 		D:              false,
@@ -37,7 +37,9 @@ func TestArgsParser(t *testing.T) {
 				inputFileName:  "input.txt",
 				outputFileName: "output.txt",
 			}, 
-			nil,
+			fmt.Errorf("Неправильный формат ввода!\n" + 
+								   "Параметры c, d, u взаимозаменяемы, поэтому их использование вместе не имеет никакого смысла.\n" +
+								   "Использование утилиты uniq:\nuniq [-c | -d | -u] [-i] [-f num] [-s chars] [input_file [output_file]]"),
 		},
 		{
 			[]string{"-f", "safffsa"}, 
@@ -79,9 +81,9 @@ func TestArgsParser(t *testing.T) {
 	}
 
 	for _, e := range tests {
-		res, err := argsParser(e.args, e.options)
+		res, err := parseArgs(e.args, e.options)
 		if res != e.exp || (err != nil && err.Error() != e.err.Error()){
-			t.Errorf("Test argsParser error %s expected %s",
+			t.Errorf("Test parseArgs error %s expected %s",
 					err.Error(), e.err.Error())
 		}
 	}
@@ -107,7 +109,7 @@ func TestEntryNumber(t *testing.T) {
 	}
 }
 
-func TestUniqManager(t *testing.T) {
+func TestEditBuf(t *testing.T) {
 	var tests = []struct {
 		options Options
 		buf []string
@@ -172,34 +174,142 @@ func TestUniqManager(t *testing.T) {
 	}
 
 	for _, e := range tests {
-		res := uniqManager(e.options, e.buf)
-		assert.Equal(t, res, e.exp, "TestUniqManager")
+		res := editBuf(e.options, e.buf)
+		assert.Equal(t, res, e.exp, "TestEditBuf")
 	}
 }
 
-func TestUniqStringsChecker(t *testing.T) {
+func TestFindRepeatedLines(t *testing.T) {
 
+	var tests = []struct {
+		buf []string
+		edittedBuf []string
+		exp []string
+	}{
+		{
+			[]string{"aaa", "aaa", "b"}, 
+			[]string{"aaa", "aaa", "b"}, 
+			[]string{"aaa"},
+		},
+		{
+			[]string{"baa", "baa"}, 
+			[]string{"aa", "aa"}, 
+			[]string{"baa"},
+		},
+		{
+			[]string{"aaa", "baa", "aaa"}, 
+			[]string{"aaa", "baa", "aaa"}, 
+			nil,
+		},
+
+	}
+
+	for _, e := range tests {
+		res := findRepeatedLines(e.buf, e.edittedBuf)
+		assert.Equal(t, res, e.exp, "TestFindRepeatedLines")
+	}
+}
+
+func TestFindUniqLines(t *testing.T) {
+
+	var tests = []struct {
+		buf []string
+		edittedBuf []string
+		exp []string
+	}{
+		{
+			[]string{"aaa", "aaa", "b"}, 
+			[]string{"aaa", "aaa", "b"}, 
+			[]string{"aaa", "b"},
+		},
+		{
+			[]string{"baa", "baa"}, 
+			[]string{"aa", "aa"}, 
+			[]string{"baa"},
+		},
+		{
+			[]string{"aaa", "baa", "aaa"}, 
+			[]string{"aaa", "baa", "aaa"}, 
+			[]string{"aaa", "baa", "aaa"},
+		},
+
+	}
+
+	for _, e := range tests {
+		res := findUniqLines(e.buf, e.edittedBuf)
+		assert.Equal(t, res, e.exp, "TestFindUniqLines")
+	}
+}
+
+func TestFindNotRepeatedLines(t *testing.T) {
+
+	var tests = []struct {
+		buf []string
+		edittedBuf []string
+		exp []string
+	}{
+		{
+			[]string{"aaa", "aaa", "b"}, 
+			[]string{"aaa", "aaa", "b"}, 
+			[]string{"b"},
+		},
+		{
+			[]string{"baa", "baa"}, 
+			[]string{"aa", "aa"}, 
+			nil,
+		},
+		{
+			[]string{"aaa", "baa", "aaa"}, 
+			[]string{"aaa", "baa", "aaa"}, 
+			[]string{"aaa", "baa", "aaa"},
+		},
+
+	}
+
+	for _, e := range tests {
+		res := findNotRepeatedLines(e.buf, e.edittedBuf)
+		assert.Equal(t, res, e.exp, "TestFindNotRepeatedLines")
+	}
+}
+
+func TestCountOccurrencesNumber(t *testing.T) {
+
+	var tests = []struct {
+		buf []string
+		edittedBuf []string
+		exp []string
+	}{
+		{
+			[]string{"aaa", "aaa"}, 
+			[]string{"aaa", "aaa"}, 
+			[]string{"2 aaa"},
+		},
+		{
+			[]string{"baa", "baa"}, 
+			[]string{"aa", "aa"}, 
+			[]string{"2 baa"},
+		},
+		{
+			[]string{"baa", "baa", "aab"}, 
+			[]string{"aa", "aa", "ab"}, 
+			[]string{"2 baa", "1 aab"},
+		},
+
+	}
+
+	for _, e := range tests {
+		res := countOccurrencesNumber(e.buf, e.edittedBuf)
+		assert.Equal(t, res, e.exp, "TestCountOccurrencesNumber")
+	}
+}
+
+func TestCheckUniqLines(t *testing.T) {
 	var tests = []struct {
 		options Options
 		buf []string
 		edittedBuf []string
 		exp []string
 	}{
-		{
-			Options {
-				C:              true,
-				D:              true,
-				U:              true,
-				F:              -1,
-				S:              -1,
-				I:              false,
-				inputFileName:  "",
-				outputFileName: "",
-			}, 
-			[]string{}, 
-			[]string{}, 
-			nil,
-		},
 		{
 			Options {
 				C:              false,
@@ -278,7 +388,7 @@ func TestUniqStringsChecker(t *testing.T) {
 	}
 
 	for _, e := range tests {
-		res := uniqStringsChecker(e.options, e.buf, e.edittedBuf)
-		assert.Equal(t, res, e.exp, "TestUniqStringsChecker")
+		res := checkUniqLines(e.options, e.buf, e.edittedBuf)
+		assert.Equal(t, res, e.exp, "TestCheckUniqLines")
 	}
 }

@@ -32,7 +32,7 @@ func entryNumber(slice []string, element string) int {
 }
 
 // Функция для чтения входных данных
-func scanner(input *os.File) []string {
+func scan(input *os.File) []string {
 	var buf []string
 
 	inputScanner := bufio.NewScanner(input)
@@ -49,7 +49,7 @@ func scanner(input *os.File) []string {
 }
 
 // Функция для записи в файл
-func writer(output *os.File, buf []string) {
+func write(output *os.File, buf []string) {
 	datawriter := bufio.NewWriter(output)
 
 	for _, line := range buf {
@@ -60,7 +60,7 @@ func writer(output *os.File, buf []string) {
 }
 
 // Парсер входных данных
-func argsParser(args []string, options Options) (Options, error) {
+func parseArgs(args []string, options Options) (Options, error) {
 	for idx, argValue := range args {
 		if argValue == "-c" {
 			options.C = true
@@ -100,42 +100,50 @@ func argsParser(args []string, options Options) (Options, error) {
 			return options, fmt.Errorf("Такого параметра не существует.")
 		} else {
 			file, err := os.Open(argValue)
-			if err == nil {
-				if options.inputFileName == "" {
-					options.inputFileName = argValue
-				} else if options.outputFileName == "" {
-					options.outputFileName = argValue
-				}
-
-				file.Close()
-			} else {
+			if err != nil {
 				return options, err
 			}
+
+			if options.inputFileName == "" {
+				options.inputFileName = argValue
+			} else if options.outputFileName == "" {
+				options.outputFileName = argValue
+			}
+
+			file.Close()
 		}
+	}
+
+	if (options.C && options.D) ||
+	   (options.D && options.U) ||
+	   (options.C && options.U) {
+		return options, fmt.Errorf("Неправильный формат ввода!\n" + 
+								   "Параметры c, d, u взаимозаменяемы, поэтому их использование вместе не имеет никакого смысла.\n" +
+								   "Использование утилиты uniq:\nuniq [-c | -d | -u] [-i] [-f num] [-s chars] [input_file [output_file]]")
 	}
 
 	return options, nil
 }
 
 // Проверка на наличие файла со входными данными
-func inputManager(options Options) []string {
+func selectInput(options Options) []string {
 	if options.inputFileName != "" {
 		inputFile, err := os.Open(options.inputFileName)
 		defer inputFile.Close()
 
 		if err == nil {
-			return scanner(inputFile)
+			return scan(inputFile)
 		}
 
 	} else {
-		return scanner(os.Stdin)
+		return scan(os.Stdin)
 	}
 
 	return nil
 }
 
 // Подготовка и изменение массива входных данных в зависимости от условий
-func uniqManager(options Options, buf []string) []string {
+func editBuf(options Options, buf []string) []string {
 	if options.F >= 0 {
 		for idx := range buf {
 			splitBuf := strings.Split(buf[idx], " ")
@@ -164,77 +172,81 @@ func uniqManager(options Options, buf []string) []string {
 	return buf
 }
 
-// Составление конечного массива по алгоритму в зависимости от условий
-func uniqStringsChecker(options Options, buf []string, edittedBuf []string) []string {
-	if (options.C && options.D) ||
-	   (options.D && options.U) ||
-	   (options.C && options.U) {
-		return nil
+// Функция для подсчёта количества встречаний строки во входных данных
+func countOccurrencesNumber(buf []string, edittedBuf []string) []string {
+	var uniqStringsBuf []string
+
+	counter := 1
+
+	prevoiusLine := edittedBuf[0]
+	for idx, value := range edittedBuf[1:] {
+		if value != prevoiusLine {
+			uniqStringsBuf = append(uniqStringsBuf, strconv.Itoa(counter) + " " + buf[idx])
+			counter = 1
+		} else {
+			counter++
+		}
+
+		prevoiusLine = value
+	}
+	uniqStringsBuf = append(uniqStringsBuf, strconv.Itoa(counter) + " " + buf[len(buf) - 1])
+
+	return uniqStringsBuf
+}
+
+// Функция для поиска повторяющихся строк во входных данных
+func findRepeatedLines(buf []string, edittedBuf []string) []string {
+	var repeatStringsBuf []string
+
+	prevoiusLine := edittedBuf[0]
+	counter := 0
+	for idx, value := range edittedBuf[1:] {
+		if value != prevoiusLine  {
+			if counter > 0 {
+				repeatStringsBuf = append(repeatStringsBuf, buf[idx])
+			}
+			counter = 0
+		} else {
+			counter++
+		}
+		prevoiusLine = value
 	}
 
-	if options.C {
-		var uniqStringsBuf []string
+	if counter > 0 {
+		repeatStringsBuf = append(repeatStringsBuf, buf[len(buf) - 1])
+	}
+	return repeatStringsBuf
+}
 
-		counter := 1
+// Функция для поиска не повторяющихся строк во входных данных
+func findNotRepeatedLines(buf []string, edittedBuf []string) []string {
+	var uniqStringsBuf []string
+	var repeatStringsBuf []string
+	var notRepeatStringsBuf []string
 
-		edittedBuf = append(edittedBuf, "")
-		prevoiusLine := edittedBuf[0]
-		for idx, value := range edittedBuf[1:len(edittedBuf) + 1] {
-			if value != prevoiusLine {
-				uniqStringsBuf = append(uniqStringsBuf, strconv.Itoa(counter) + " " + buf[idx])
-				counter = 1
-			} else {
-				counter++
-			}
-			prevoiusLine = value
-		}
-
-		return uniqStringsBuf
-	} else if options.D {
-		var repeatStringsBuf []string
-
-		prevoiusLine := edittedBuf[0]
-		counter := 1
-		edittedBuf = append(edittedBuf, "")
-		for idx, value := range edittedBuf[1:len(edittedBuf) + 1] {
-			if value != prevoiusLine  {
-				if counter > 0 {
-					repeatStringsBuf = append(repeatStringsBuf, buf[idx])
-				}
-				counter = 0
-			} else {
-				counter++
-			}
-			prevoiusLine = value
-		}
-
-		return repeatStringsBuf
-	} else if options.U {
-		var uniqStringsBuf []string
-		var repeatStringsBuf []string
-		var notRepeatStringsBuf []string
-
-		prevoiusLine := ""
-		for idx, value := range edittedBuf {
-			if value != prevoiusLine {
-				uniqStringsBuf = append(uniqStringsBuf, buf[idx])
-			} else {
-				if entryNumber(repeatStringsBuf, buf[idx]) == 0 {
-					repeatStringsBuf = append(repeatStringsBuf, buf[idx])
-				}
-			}
-			prevoiusLine = value
-		}
-		
-		for idx, value := range uniqStringsBuf {
-			if entryNumber(repeatStringsBuf, value) == 0 {
-				notRepeatStringsBuf = append(notRepeatStringsBuf, uniqStringsBuf[idx])
+	prevoiusLine := ""
+	for idx, value := range edittedBuf {
+		if value != prevoiusLine {
+			uniqStringsBuf = append(uniqStringsBuf, buf[idx])
+		} else {
+			if entryNumber(repeatStringsBuf, buf[idx]) == 0 {
+				repeatStringsBuf = append(repeatStringsBuf, buf[idx])
 			}
 		}
-
-		return notRepeatStringsBuf
+		prevoiusLine = value
+	}
+	
+	for idx, value := range uniqStringsBuf {
+		if entryNumber(repeatStringsBuf, value) == 0 {
+			notRepeatStringsBuf = append(notRepeatStringsBuf, uniqStringsBuf[idx])
+		}
 	}
 
+	return notRepeatStringsBuf
+}
+
+// Функция для, которая оставляет во входных данных только уникальные строки
+func findUniqLines(buf []string,edittedBuf []string) []string {
 	var uniqStringsBuf []string
 
 	prevoiusLine := ""
@@ -246,6 +258,19 @@ func uniqStringsChecker(options Options, buf []string, edittedBuf []string) []st
 	}
 
 	return uniqStringsBuf
+}
+
+// Составление конечного массива по алгоритму в зависимости от условий
+func checkUniqLines(options Options, buf []string, edittedBuf []string) []string {
+	if options.C {
+		return countOccurrencesNumber(buf, edittedBuf)
+	} else if options.D {
+		return findRepeatedLines(buf, edittedBuf)
+	} else if options.U {
+		return findNotRepeatedLines(buf, edittedBuf)
+	}
+
+	return findUniqLines(buf, edittedBuf)
 }
 
 // Основная функция
@@ -264,28 +289,21 @@ func Uniq() {
 	var buf []string
 	var edittedBuf []string
 
-	options, err := argsParser(os.Args[1:], optionsInitial)
+	options, err := parseArgs(os.Args[1:], optionsInitial)
 	if err != nil {
 		fmt.Println("Ошибка:\n", err)
 		return
 	}
 
-	buf = inputManager(options)
+	buf = selectInput(options)
 	if buf == nil {
 		fmt.Println("Вы ввели пустые данные!")
 		return
 	}
 
 	edittedBuf = append(edittedBuf, buf...)
-	uniqManager(options, edittedBuf)
-	resultBuf := uniqStringsChecker(options, buf, edittedBuf)
-
-	if resultBuf == nil {
-		fmt.Println("Неправильный формат ввода!\n", 
-					"Параметры c, d, u взаимозаменяемы, поэтому их использование вместе не имеет никакого смысла.\n", 
-					"Использование утилиты uniq:\nuniq [-c | -d | -u] [-i] [-f num] [-s chars] [input_file [output_file]]")
-		return
-	}
+	editBuf(options, edittedBuf)
+	resultBuf := checkUniqLines(options, buf, edittedBuf)
 
 	if options.outputFileName != "" {
 		// Вывод результата в файл
@@ -296,13 +314,12 @@ func Uniq() {
 			fmt.Println("Ошибка:\n", err)
 			return
 		} 
-		
-		writer(outputFile, resultBuf)
+
+		write(outputFile, resultBuf)
 	} else {
 		// Вывод результата в StdOut
 		for _, value := range resultBuf {
 			fmt.Println(value)
 		}
 	}
-
 }
