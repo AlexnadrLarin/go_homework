@@ -1,4 +1,4 @@
-module utils
+module calc_utils
 
 go 1.18
 
