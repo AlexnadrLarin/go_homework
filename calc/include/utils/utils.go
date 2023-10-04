@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func expressionParse(expression string) []string {
+func expressionParse(expression string) ([]string, error) {
 	elements := []string{}
 	currentElement := ""
    
@@ -21,7 +21,7 @@ func expressionParse(expression string) []string {
 	 	} else {
 			_, err := strconv.ParseFloat(string(value), 64)
 			if err != nil {
-				return nil
+				return nil, err
 			}
 	  		currentElement += string(value)
 		}
@@ -31,15 +31,11 @@ func expressionParse(expression string) []string {
 		elements = append(elements, currentElement)
 	}
    
-	return elements
+	return elements, nil
 }
    
 func isOperator(value rune) bool {
-	if value == '+' || value == '-' || value == '*' || value == '/' {
-		return true
-	} else {
-		return false
-	}
+	return value == '+' || value == '-' || value == '*' || value == '/' 
 }
 
 // Основная функция для анализа выражения
@@ -49,10 +45,10 @@ func EvaluateExpression(expression string) (float64, error) {
 	var operandsStack []float64
 	var operatorsStack []string
 
- 	elements := expressionParse(expression)
+ 	elements, err := expressionParse(expression)
 
-	if elements == nil {
-		return 0, fmt.Errorf("Неправильный формат ввода!")
+	if err != nil {
+		return 0, err
 	}
 
  	for _, element := range elements {
@@ -149,12 +145,8 @@ func hasHigherPrecedence(operand1, operand2 string) bool {
  	if operand1 == "*" || operand1 == "/" {
   		return true
  	}
- 	if operand1 == "-" || operand1 == "+" {
-  		if operand2 == "-" || operand2 == "+" {
-			return true
-		} else {
-			return false
-		}
+ 	if operand1 == "+" || operand1 == "-" {
+  		return operand2 	== "+" || operand2 == "-"
  	}
  	return false
 }
